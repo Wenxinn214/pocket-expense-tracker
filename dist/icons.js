@@ -4,6 +4,7 @@ const paths = {
  history:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
  insights:'<path d="M4 20V10m8 10V4m8 16v-7M2 21h20"/>',
  plus:'<path d="M12 5v14M5 12h14"/>', close:'<path d="m6 6 12 12M6 18 18 6"/>',
+ arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',
  food:'<path d="M4 3v6a3 3 0 0 0 6 0V3M7 3v18M20 21V3c-4 2-5 6-5 10h5"/>',
  transport:'<path d="m5 7 2-4h10l2 4M3 11l2-4h14l2 4v7H3Z"/><path d="M5 18v3m14-3v3M7 12h1m8 0h1"/>',
  shopping:'<path d="M5 7h14l1 14H4ZM9 8V6a3 3 0 0 1 6 0v2"/>',
