@@ -1,0 +1,11 @@
+{
+  "name": "pocket-expenses",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/icons.js && node --test tests/data.test.mjs"
+  }
+}
