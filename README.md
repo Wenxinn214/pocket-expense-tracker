@@ -37,3 +37,12 @@ Replace `expenseRepository.load()` and `expenseRepository.save()` in `dist/data.
 ## Verification
 
 Data tests cover the sample total (RM 77.60), 3 October total (RM 30.80), category breakdown, filter combinations, invalid amounts/dates, empty-state persistence and CSV escaping. Completed browser checks exercise adding, editing, cancelling/confirming deletion, refreshed persistence, History filters, Insights, custom categories, CSV download and responsive layouts at 320px, 390px and 1440px. Enlarged text was also checked at 200%.
+
+## Vercel deployment
+
+The GitHub repository is private. Import this repository into Vercel with the Other preset and project root `./`. `vercel.json` runs syntax and data checks and publishes only `dist`.
+
+Keep Vercel Authentication enabled for **All Deployments**, including the production domain. Repository privacy alone does not restrict website access. Sign into the authorized Vercel account to open the website.
+
+Expenses remain local to the browser and site origin; this deployment does not add cross-device sync. Export CSV before clearing browser storage.
+
