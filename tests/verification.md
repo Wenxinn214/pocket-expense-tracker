@@ -1,8 +1,8 @@
-# Browser verification — Pocket scrapbook update
+# Browser verification — little albums and monthly keepsakes
 
-Verified in Chromium on 25 October 2026 using separate browser profiles and generated image fixtures. No personal expenses or user photos were used.
+Verified locally in Chromium on 26 October 2026 (Asia/Kuala_Lumpur), using separate browser profiles and generated photo fixtures. No user expense data or personal photos were used.
 
-## Existing expense and photo flows
+## Expense and photo flows
 
 - migrates all legacy expenses to IndexedDB
 - retains original localStorage migration backup
@@ -43,7 +43,7 @@ Verified in Chromium on 25 October 2026 using separate browser profiles and gene
 - blank add form save action fits phone height
 - no runtime errors
 
-## Calendar, photo wall and complete backup
+## Calendar, photo wall and backup
 
 - calendar renders all 31 days of October
 - calendar initially selects today
@@ -91,6 +91,60 @@ Verified in Chromium on 25 October 2026 using separate browser profiles and gene
 - insights fits 1440px
 - new features raise no runtime errors
 
+## Albums, captions, cover photos and monthly cards
+
+- existing diary opens with an empty album collection
+- photo cover and notes stay in the unsaved expense draft
+- cancelling expense edit preserves saved photo metadata
+- cancelling the note editor leaves the expense draft untouched
+- saving an expense persists individual captions and chosen cover
+- expense row thumbnail uses the chosen cover
+- calendar model respects selected covers
+- photo wall displays each photo note
+- large photo view uses its own note
+- album list has a friendly empty state
+- new album opens the expense picker
+- picker calculates selected expense total
+- selection survives search filtering
+- album shows the right total without duplicating diary records
+- album photo view includes all related photos and notes
+- expense editor shows existing album membership
+- editing an expense immediately updates its album total
+- cancelling selection keeps album membership
+- removing from an album keeps the underlying expense
+- new expense added inside an album is linked automatically
+- deleting an expense cleans album references and updates total
+- album name and colour persist
+- one expense can belong to multiple albums without duplicate records
+- album deletion asks confirmation
+- deleting an album preserves expenses and photo notes
+- monthly card shows exact total and expense count
+- monthly card uses the most frequent category
+- monthly card selects expense covers and their notes
+- monthly card downloads a real 1080×1440 PNG
+- privacy option hides amount in card preview
+- hidden-amount PNG excludes computed amounts
+- month change updates card statistics and photos
+- empty monthly card is handled
+- Insights opens the card for its selected month
+- complete backup includes albums, photo notes and cover choices
+- restore reconstructs album membership, notes and covers
+- all scrapbook metadata survives refresh
+- previous complete backup format is still accepted
+- photos view fits 320px
+- albums view fits 320px
+- recap view fits 320px
+- album details fit 320px
+- photos view fits 390px
+- albums view fits 390px
+- recap view fits 390px
+- album details fit 390px
+- photos view fits 1440px
+- albums view fits 1440px
+- recap view fits 1440px
+- album details fit 1440px
+- scrapbook features raise no runtime errors
+
 Runtime errors: 0
 
-Syntax, calculations, calendar boundaries and backup-format checks: `npm run check`.
+Syntax, calculations, backup validation and model checks: `npm run check`.

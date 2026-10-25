@@ -42,11 +42,11 @@ export function createExpenseRepository(seedState) {
   return {
     async load() {
       const existing = await transaction('readonly', value => value);
-      if (existing) return existing;
+      if (existing) return {...existing,albums:existing.albums||[]};
       const raw = localStorage.getItem(LEGACY_KEY);
       const legacy = raw ? JSON.parse(raw) : seedState();
       if (legacy.version !== 1 || !Array.isArray(legacy.expenses) || !Array.isArray(legacy.categories)) throw new Error('Unrecognized expense data');
-      const migrated = {...legacy, version:2, revision:0, expenses:legacy.expenses.map(e => ({...e, photos:e.photos || []}))};
+      const migrated = {...legacy, version:2, revision:0, albums:[], expenses:legacy.expenses.map(e => ({...e, photos:e.photos || []}))};
       return transaction('readwrite', (current, store) => {
         if (current) return current;
         store.put(migrated, STATE_KEY);
@@ -56,7 +56,9 @@ export function createExpenseRepository(seedState) {
     async save(state) {
       return transaction('readwrite', (current, store) => {
         if (!current || current.revision !== state.revision) throw new StorageConflictError();
-        const next = {...state, version:2, revision:current.revision + 1};
+        const ids=new Set(state.expenses.map(e=>e.id));
+        const albums=(state.albums||[]).map(album=>({...album,expenseIds:[...new Set(album.expenseIds)].filter(id=>ids.has(id))}));
+        const next = {...state, albums, version:2, revision:current.revision + 1};
         store.put(next, STATE_KEY);
         return next;
       });

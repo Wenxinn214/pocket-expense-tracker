@@ -1,3 +1,4 @@
+import {coverPhoto,orderedPhotos} from './photos.js';
 import {cents,newestFirst} from './data.js';
 
 export function shiftMonth(month,step) {
@@ -17,13 +18,13 @@ export function calendarDays(expenses,month) {
  const cells=Array.from({length:leading},()=>null);
  for(let day=1;day<=count;day++) {
   const date=`${month}-${String(day).padStart(2,'0')}`,items=records.get(date)||[];
-  cells.push({date,day,count:items.length,amount:items.reduce((sum,e)=>sum+cents(e.amount),0)/100,cover:items.flatMap(e=>e.photos||[])[0]||null});
+  cells.push({date,day,count:items.length,amount:items.reduce((sum,e)=>sum+cents(e.amount),0)/100,cover:items.map(coverPhoto).find(Boolean)||null});
  }
  while(cells.length%7)cells.push(null);
  return cells;
 }
 export function memoryEntries(expenses,month='') {
- return newestFirst(expenses).filter(e=>!month||e.date.startsWith(month+'-')).flatMap(expense=>(expense.photos||[]).map(photo=>({expense,photo})));
+ return newestFirst(expenses).filter(e=>!month||e.date.startsWith(month+'-')).flatMap(expense=>orderedPhotos(expense).map(photo=>({expense,photo})));
 }
 export function groupMemories(expenses,month='') {
  const groups=new Map();

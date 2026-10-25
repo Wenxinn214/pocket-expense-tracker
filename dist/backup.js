@@ -1,5 +1,5 @@
 import {validateExpense} from './data.js';
-import {MAX_PHOTOS} from './photos.js';
+import {coverPhoto,MAX_PHOTOS} from './photos.js';
 
 export const BACKUP_FORMAT = 'pocket-complete-backup';
 export const MAX_BACKUP_BYTES = 256 * 1024 * 1024;
@@ -22,26 +22,26 @@ function hasImageSignature(bytes,type) {
 }
 export function backupSummary(state) {
  const dates=state.expenses.map(e=>e.date).sort();
- return {expenses:state.expenses.length,photos:state.expenses.reduce((sum,e)=>sum+(e.photos?.length||0),0),categories:state.categories.length,firstDate:dates[0]||null,lastDate:dates.at(-1)||null};
+ return {expenses:state.expenses.length,photos:state.expenses.reduce((sum,e)=>sum+(e.photos?.length||0),0),categories:state.categories.length,albums:(state.albums||[]).length,firstDate:dates[0]||null,lastDate:dates.at(-1)||null};
 }
 export async function serializeBackup(state) {
  const expenses=[];
  for(const expense of state.expenses) {
   const photos=[];
   for(const photo of expense.photos||[]) {
-   photos.push({id:photo.id,name:photo.name,width:photo.width,height:photo.height,createdAt:photo.createdAt,type:photo.blob.type,data:encode(new Uint8Array(await photo.blob.arrayBuffer()))});
+   photos.push({id:photo.id,name:photo.name,width:photo.width,height:photo.height,createdAt:photo.createdAt,type:photo.blob.type,caption:photo.caption||'',data:encode(new Uint8Array(await photo.blob.arrayBuffer()))});
   }
   const {id,amount,category,remark,date,createdAt,updatedAt}=expense;
-  expenses.push({id,amount,category,remark,date,createdAt,updatedAt,photos});
+  expenses.push({id,amount,category,remark,date,createdAt,updatedAt,photos,coverPhotoId:coverPhoto(expense)?.id||''});
  }
- const text=JSON.stringify({format:BACKUP_FORMAT,version:1,exportedAt:new Date().toISOString(),categories:state.categories,expenses});
+ const text=JSON.stringify({format:BACKUP_FORMAT,version:2,albums:state.albums||[],exportedAt:new Date().toISOString(),categories:state.categories,expenses});
  if(new Blob([text]).size>MAX_BACKUP_BYTES)fail('This backup is larger than the 256 MB file limit.');
  return text;
 }
 export function parseBackup(text) {
  let input;
  try {input=JSON.parse(text);}catch{fail('This is not a readable Pocket backup. Choose the complete backup JSON file.');}
- if(!input||input.format!==BACKUP_FORMAT||input.version!==1||!validTime(input.exportedAt))fail('This file is not a supported Pocket complete backup.');
+ if(!input||input.format!==BACKUP_FORMAT||![1,2].includes(input.version)||!validTime(input.exportedAt))fail('This file is not a supported Pocket complete backup.');
  if(!Array.isArray(input.categories)||!input.categories.length||!Array.isArray(input.expenses))fail('The backup is missing its expenses or categories.');
  const categoryIds=new Set(),names=new Set(),expenseIds=new Set(),photoIds=new Set();
  const categories=input.categories.map(c=>{
@@ -57,15 +57,25 @@ export function parseBackup(text) {
   if(!Array.isArray(e.photos)||e.photos.length>MAX_PHOTOS)fail('An expense in this backup has an invalid photo list.');
   const photos=e.photos.map(p=>{
    if(!p||!validId(p.id)||photoIds.has(p.id)||!validText(p.name,512)||!validTime(p.createdAt)||!photoTypes.has(p.type)||!Number.isInteger(p.width)||!Number.isInteger(p.height)||p.width<1||p.height<1||p.width>1600||p.height>1600||typeof p.data!=='string'||p.data.length>32*1024*1024||(p.data.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(p.data)))fail('The backup contains an invalid photo attachment.');
+   if(!validText(p.caption??'',160))fail('The backup contains an invalid photo note.');
    photoIds.add(p.id);
    let bytes;
    try{bytes=Uint8Array.from(atob(p.data),c=>c.charCodeAt(0));}catch{fail('A photo in the backup could not be read.');}
    if(!hasImageSignature(bytes,p.type))fail('A photo in the backup is damaged or has an unsupported format.');
-   return {id:p.id,name:p.name,width:p.width,height:p.height,createdAt:p.createdAt,blob:new Blob([bytes],{type:p.type})};
+   return {id:p.id,name:p.name,width:p.width,height:p.height,createdAt:p.createdAt,caption:p.caption||'',blob:new Blob([bytes],{type:p.type})};
   });
-  return {id:e.id,amount:e.amount,category:e.category,remark:e.remark,date:e.date,createdAt:e.createdAt,updatedAt:e.updatedAt,photos};
+  const coverPhotoId=e.coverPhotoId??photos[0]?.id??'';
+  if(typeof coverPhotoId!=='string'||(coverPhotoId&&!photos.some(p=>p.id===coverPhotoId)))fail('An expense has an invalid cover photo.');
+  return {id:e.id,amount:e.amount,category:e.category,remark:e.remark,date:e.date,createdAt:e.createdAt,updatedAt:e.updatedAt,photos,coverPhotoId};
  });
- return {version:2,expenses,categories,exportedAt:input.exportedAt};
+ if((input.version===2||input.albums!==undefined)&&!Array.isArray(input.albums))fail('The backup is missing its album list.');
+ const albumIds=new Set();
+ const albums=(input.albums||[]).map(album=>{
+  if(!album||!validId(album.id)||albumIds.has(album.id)||!validText(album.name,48)||!album.name.trim()||!validText(album.note,200)||!['rose','butter','lavender','mint'].includes(album.color)||!validTime(album.createdAt)||!validTime(album.updatedAt)||!Array.isArray(album.expenseIds)||new Set(album.expenseIds).size!==album.expenseIds.length||!album.expenseIds.every(id=>expenseIds.has(id)))fail('The backup contains an invalid album or expense link.');
+  albumIds.add(album.id);
+  return {id:album.id,name:album.name,note:album.note,color:album.color,createdAt:album.createdAt,updatedAt:album.updatedAt,expenseIds:[...album.expenseIds]};
+ });
+ return {version:2,expenses,categories,albums,exportedAt:input.exportedAt};
 }
 export async function verifyBackupPhotos(state) {
  for(const expense of state.expenses)for(const photo of expense.photos) {

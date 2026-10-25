@@ -23,3 +23,11 @@ export async function preparePhoto(file) {
     return {id:crypto.randomUUID(), name:file.name, blob, width:canvas.width, height:canvas.height, createdAt:new Date().toISOString()};
   } finally { bitmap.close(); }
 }
+
+export function coverPhoto(expense) {
+ return expense.photos?.find(photo=>photo.id===expense.coverPhotoId)||expense.photos?.[0]||null;
+}
+export function orderedPhotos(expense) {
+ const cover=coverPhoto(expense);
+ return cover?[cover,...expense.photos.filter(photo=>photo.id!==cover.id)]:[];
+}
