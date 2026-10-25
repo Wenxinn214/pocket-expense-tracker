@@ -1,10 +1,11 @@
+import {createExpenseRepository} from './storage.js';
 export const STORAGE_KEY = 'pocket.expenses.v1';
 export const defaultCategories = [
  ['Food & Drinks','food'],['Transport','transport'],['Shopping','shopping'],['Bills','bills'],['Entertainment','entertainment'],['Health','health'],['Travel','travel'],['Personal','personal'],['Others','others']
 ].map(([name,icon])=>({id:icon,name,icon,custom:false,hidden:false}));
 export const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 export const currency = amount => `RM ${new Intl.NumberFormat('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount)}`;
-export const dateLabel = date => new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(date+'T12:00:00'));
+export const dateLabel = date => new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(date+'T12:00:00')) + ' · ' + new Intl.DateTimeFormat('en-GB',{weekday:'long'}).format(new Date(date+'T12:00:00'));
 export const monthLabel = month => new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(new Date(month+'-01T12:00:00'));
 export const cents = amount => Math.round(Number(amount)*100);
 export const total = expenses => expenses.reduce((sum,e)=>sum+cents(e.amount),0)/100;
@@ -26,9 +27,14 @@ export function seedState() {
  const records=[['2026-10-03','Food & Drinks','Lunch',18.5],['2026-10-03','Transport','Grab to office',12.3],['2026-10-02','Shopping','Watsons',36.9],['2026-10-01','Food & Drinks','Coffee',9.9]];
  return {version:1,categories:structuredClone(defaultCategories),expenses:records.map(([date,category,remark,amount],i)=>({id:`sample_${i+1}`,date,category,remark,amount,createdAt:`${date}T${i===0?'13':'09'}:00:00.000Z`,updatedAt:`${date}T09:00:00.000Z`}))};
 }
-// Repository boundary: replace these two methods with backend calls to add sync later.
-export const expenseRepository = {
- load() { const raw=localStorage.getItem(STORAGE_KEY); if(!raw) {const state=seedState();this.save(state);return state;} const state=JSON.parse(raw); if(state.version!==1 || !Array.isArray(state.expenses) || !Array.isArray(state.categories)) throw new Error('Unrecognized expense data'); return state; },
- save(state) { localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }
-};
+// Replace this repository adapter to add a backend later.
+export const expenseRepository = createExpenseRepository(seedState);
+export function groupExpensesByDay(expenses) {
+ const days = new Map();
+ for (const expense of newestFirst(expenses)) {
+  if (!days.has(expense.date)) days.set(expense.date, []);
+  days.get(expense.date).push(expense);
+ }
+ return [...days].map(([date,records]) => ({date, expenses:records, amount:total(records)}));
+}
 export const csvExport = expenses => '\uFEFFDate,Category,Remark,Amount\r\n'+newestFirst(expenses).map(e=>[e.date,e.category,e.remark,e.amount.toFixed(2)].map(value=>{let s=String(value); if(/^[=+@\-\t\r]/.test(s)) s="'"+s; return '"'+s.replaceAll('"','""')+'"';}).join(',')).join('\r\n');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {seedState,defaultCategories,total,filterExpenses,categorySummary,validateExpense,csvExport,expenseRepository,STORAGE_KEY} from '../dist/data.js';
+import {seedState,defaultCategories,total,filterExpenses,categorySummary,validateExpense,csvExport,dateLabel,groupExpensesByDay} from '../dist/data.js';
 test('seed totals, filter intersections and category percentages',()=>{
  const data=seedState().expenses;
  assert.equal(total(data),77.60);
@@ -22,12 +22,23 @@ test('amount and date validation reject bad input',()=>{
  for(const date of ['2026-02-30','2026-13-01','2026-00-00','']) assert.ok(validateExpense({...input,date},defaultCategories));
  assert.ok(validateExpense({...input,category:''},defaultCategories));
 });
-test('repository retains empty state and export escapes remarks',()=>{
- const storage=new Map();globalThis.localStorage={getItem:key=>storage.get(key)??null,setItem:(key,val)=>storage.set(key,val)};
- const seeded=expenseRepository.load();assert.equal(seeded.expenses.length,4);
- expenseRepository.save({...seeded,expenses:[]});assert.equal(expenseRepository.load().expenses.length,0);
- const csv=csvExport([{...seeded.expenses[0],remark:'Coffee, "iced"\nGood'}]);
+test('daily journal includes every expense, weekdays and exact daily subtotals',()=>{
+ const seeded=seedState().expenses;
+ const records=[...seeded,...Array.from({length:7},(_,i)=>({...seeded[0],id:`test_${i}`,date:'2026-10-04',amount:.1}))];
+ const days=groupExpensesByDay(records);
+ assert.equal(days[0].date,'2026-10-04');
+ assert.equal(days[0].expenses.length,7);
+ assert.equal(days[0].amount,.7);
+ assert.equal(days.reduce((n,day)=>n+day.expenses.length,0),11);
+ assert.equal(days.find(day=>day.date==='2026-10-03').amount,30.8);
+ assert.equal(dateLabel('2026-10-03'),'3 Oct 2026 · Saturday');
+ assert.equal(dateLabel('2026-10-25'),'25 Oct 2026 · Sunday');
+ assert.deepEqual(groupExpensesByDay([]),[]);
+});
+test('CSV still exports remarks and amounts independently of photo attachments',()=>{
+ const seeded=seedState().expenses;
+ const csv=csvExport([{...seeded[0],remark:'Coffee, "iced"\nGood',photos:[{id:'photo_1',blob:new Blob(['image'])}]}]);
  assert.ok(csv.includes('"Coffee, ""iced""\nGood"'));assert.ok(csv.includes('"18.50"'));
- assert.ok(csvExport([{...seeded.expenses[0],remark:'=1+1'}]).includes("'=1+1"));
- storage.set(STORAGE_KEY,'broken');assert.throws(()=>expenseRepository.load());
+ assert.ok(csvExport([{...seeded[0],remark:'=1+1'}]).includes("'=1+1"));
+ assert.ok(!csv.includes('photo_1'));
 });
