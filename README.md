@@ -20,17 +20,20 @@ Open http://localhost:3000. Set `PORT` to use a different port. `npm run check` 
 - `dist/storage.js`: asynchronous IndexedDB repository, atomic localStorage migration, Blob persistence and revision checks for concurrent tabs.
 - `dist/photos.js`: local photo validation, orientation-aware resizing and JPEG compression.
 - `dist/analytics.js`: local-date daily series, monthly metrics and elapsed-day averages for real spending charts.
+- `dist/journal.js`: Monday-first monthly calendar cells, exact daily totals and photo memory grouping.
+- `dist/backup.js`: versioned complete backup serialization, strict import validation and photo integrity checks.
 - `dist/icons.js`: small reusable SVG icons.
-- `dist/styles.css`: responsive design, mobile bottom navigation, dialogs and accessible focus states.
+- `dist/styles.css`: base components, responsive layout and dialogs.
+- `dist/playful.css`: cream, berry-pink and butter-yellow journal theme, calendar, photo wall and backup controls.
 - `server.mjs`: dependency-free local static server.
 - `tests/data.test.mjs`: calculations, filtering, validation, persistence and CSV edge cases.
 - `tests/analytics.test.mjs`: weekly date boundaries, leap-year months, missing days and average calculations.
 
 ## Design
 
-The warm ivory and forest-green interface pairs editorial serif headings with DM Sans, quiet borders, generous spacing and clear amounts. Home includes a monthly overview, a seven-day spending chart and a category ring. Insights includes daily spending for the selected month and a complete category breakdown. Both charts reflect recorded expenses; zero-spend days stay empty. Home shows the complete journal grouped by date, with weekday names and daily subtotals. Clicking a category on Home or Insights opens the corresponding month and category in History, where individual expenses can be viewed, edited or deleted. A Back to Insights action preserves the selected month.
+The scrapbook-inspired interface uses cream paper, berry-pink controls, butter-yellow and lavender cards, rounded Nunito typography, small tape details and gently tilted photo cards. Home puts the complete daily journal first, with clear links to Calendar and Memories. Mobile bottom navigation includes Home, History, Calendar, Memories and Insights; Add expense stays easy to reach.
 
-The design takes inspiration from the layout hierarchy of [shadcn/ui](https://github.com/shadcn-ui/ui) and the typography and restrained color system of [Radix Themes](https://github.com/radix-ui/themes). The app remains dependency-free and uses its own HTML, CSS and SVG components.
+Calendar uses Monday-first weeks, shows daily amounts and photo thumbnails, and opens the selected day's complete expense list with its exact total. Adding an expense from Calendar defaults to the selected date. Memories presents every attached photo by month, newest first, with month filtering and links back to the editable expense. Existing spending charts and category drill-down remain available.
 
 Each expense stores `id`, `amount`, `category`, `remark`, `date`, `createdAt`, `updatedAt` and an optional `photos` array. Each photo stores an ID, original filename, compressed image Blob, dimensions and creation timestamp. Dates are local calendar dates; timestamps are ISO UTC. “Today” uses the device's calendar date. Custom category renaming updates existing records; hiding keeps records intact, and only unused custom categories can be deleted.
 
@@ -48,13 +51,21 @@ Photos appear as thumbnails in the daily journal and as a gallery in expense det
 
 Four sample expenses dated 1–3 October 2026 are added on first use. Use **Clear samples** on Home or Preferences to remove only those records. They are not re-added after clearing. Monthly and daily totals always follow the actual device date.
 
+## Complete backup and restore
+
+Open **Backup & restore** from the sidebar, the archive button in the mobile header, or Preferences. **Download backup** saves a versioned `pocket-complete-backup-YYYY-MM-DD.json` file containing every expense, category (including hidden custom categories) and the complete compressed photo bytes. CSV remains available for spreadsheet use and does not contain photos.
+
+Choose a complete backup file to inspect expense, photo and category counts before restoring. Restoration requires an explicit **Replace and restore** confirmation and replaces this browser's current diary; the preview also offers **Download current backup first**. Cancelling or rejecting a damaged file leaves current data unchanged. Restoration uses the same atomic IndexedDB transaction and stale-save protection as other mutations. Backup import accepts files up to 256 MB and validates IDs, dates, amounts, category references, duplicate records, image formats, dimensions and decodability before writing anything.
+
+Backups are ordinary unencrypted local JSON files. Keep them somewhere you trust. Nothing is uploaded as part of exporting or restoring a backup.
+
 ## Adding a backend later
 
 Replace the repository adapter in `dist/storage.js` with a Supabase or other database implementation. Initialization and UI mutations already await `load()` and `save()`. A remote adapter can store photo files in private object storage and preserve the expense-to-photo associations. The record shape, filtering, calculations and UI can stay the same. A database adapter can add granular insert/update/delete operations without changing the views. Add authentication and access policies at that time if shared storage is required.
 
 ## Verification
 
-Data and analytics tests cover totals, filter combinations, daily grouping, weekday names, integer-cent subtotals, CSV escaping, date boundaries, leap years and daily averages. The update passed 38 Chromium browser checks covering legacy data migration, complete daily lists, category drill-down, photo upload/resizing, refreshed Blob persistence, photo viewing/removal, cancelled edits, invalid and oversized files, failed storage writes, stale-save conflicts, deletion and custom categories. Home, History and Insights fit at 320px, 390px and 1440px. See `tests/verification.md` for the recorded checks.
+`npm run check` validates all JavaScript modules and runs data, analytics, calendar/memory and complete-backup tests. The browser verification includes the existing 38 expense/photo checks plus 45 checks for calendar navigation, selected-date entry, photo-wall grouping, month filters, complete backup download, cancelled and invalid restores, restored photo-byte equality, refreshed persistence and responsive layouts across all five pages at 320px, 390px and 1440px. See `tests/verification.md` for the recorded checks.
 
 ## Vercel deployment
 
