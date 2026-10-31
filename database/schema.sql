@@ -34,7 +34,7 @@ begin
   if found then return result; end if;
  end if;
  update public.pocket_diaries set document=payload,revision=revision+1,updated_at=now() where user_id=auth.uid() and revision=expected_revision returning * into result;
- if not found then raise exception 'Diary changed in another tab. Reload before saving.' using errcode='40001'; end if;
+ if not found then raise exception 'Diary changed in another tab. Reload before saving.' using errcode='P0001'; end if;
  return result;
 end $$;
 revoke all on function public.pocket_save(jsonb,integer) from public,anon;
@@ -43,4 +43,5 @@ insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) v
 create policy pocket_photos_owner on storage.objects for all to authenticated
 using (bucket_id='pocket-photos' and (storage.foldername(name))[1]=(select auth.uid())::text and (select pocket_private.verified()))
 with check (bucket_id='pocket-photos' and (storage.foldername(name))[1]=(select auth.uid())::text and (select pocket_private.verified()));
+
 

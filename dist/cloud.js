@@ -1,6 +1,7 @@
 import {client,requireAccount,sessionGuard} from './session.js';
+import {StorageConflictError} from './storage.js';
 const bucket=()=>client.storage.from('pocket-photos');
-const checked=r=>{if(r.error)throw new Error(r.error.code==='40001'?'Expenses changed in another tab. Reload before saving.':r.error.message);return r.data;};
+const checked=r=>{if(r.error){if(r.error.message==='Diary changed in another tab. Reload before saving.')throw new StorageConflictError();throw new Error(r.error.message);}return r.data;};
 const digest=async blob=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join('');
 export function createCloudRepository(seedState){return {
  async load(){
@@ -33,3 +34,4 @@ export function createCloudRepository(seedState){return {
   return {...state,revision:row.revision};
  }
 };}
+
