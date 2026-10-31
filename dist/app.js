@@ -61,6 +61,7 @@ async function commit(next,message) {
 }
 const nav=()=>['home','history','calendar','memories','insights'].map(p=>`<a href="#${p}" class="nav-item ${page===p?'active':''}" ${page===p?'aria-current="page"':''}>${icon(p==='memories'?'camera':p)}<span>${p[0].toUpperCase()+p.slice(1)}</span></a>`).join('');
 function render() {
+ if(!state)return;
  const title={home:'Your little <em>spending diary.</em>',history:'All the little <em>details.</em>',calendar:'A little moment, <em>every day.</em>',memories:'The days worth <em>keeping.</em>',insights:'Where your <em>little totals go.</em>'}[page];
  const subtitle={home:'Everyday expenses. Favourite little moments.',history:'Every expense, right where you left it.',calendar:'Your spending, one day at a time.',memories:'Your favourite bites, places and everyday joys.',insights:'A gentle look at this month’s spending.'}[page];
  const brand=`<span class="brand-mark">${icon('pocket')}</span>pocket<span class="brand-dot">.</span>`;

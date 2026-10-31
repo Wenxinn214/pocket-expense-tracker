@@ -1,7 +1,7 @@
 import {client,sessionGuard} from './session.js';
 const root=document.querySelector('#app');
 let started=false;
-function lock(){sessionGuard.locked=true;window.dispatchEvent(new Event('pocket:lock'));document.querySelectorAll('dialog').forEach(d=>d.close());root.replaceChildren();}
+function lock(){sessionGuard.locked=true;sessionGuard.epoch++;window.dispatchEvent(new Event('pocket:lock'));document.querySelectorAll('dialog').forEach(d=>d.close());root.replaceChildren();}
 function form(mode='login',message=''){
  root.innerHTML='<main class="account-page"><section class="panel"><p class="eyebrow">YOUR PRIVATE POCKET</p><h1></h1><p class="page-subtitle">Your expenses and photos, saved to your own account.</p><form><label class="form-label" for="account-email">Email</label><input id="account-email" type="email" autocomplete="email" required><label class="form-label" for="account-password">Password</label><input id="account-password" type="password" minlength="12" required><p role="status" class="form-error"></p><button class="primary save-button" type="submit"></button></form><button class="text-link" id="account-toggle"></button><button class="text-link" id="account-reset">Forgot password?</button></section></main>';
  root.querySelector('h1').textContent=mode==='signup'?'A little space, just for you.':mode==='recovery'?'Choose a new password.':'Welcome back.';
@@ -25,9 +25,10 @@ function form(mode='login',message=''){
 async function enter(){
  const {data,error}=await client.auth.getUser();
  if(error||!data.user?.email_confirmed_at||data.user.is_anonymous){lock();form();return;}
- sessionGuard.id=data.user.id;sessionGuard.locked=false;
+ sessionGuard.id=data.user.id;sessionGuard.locked=false;const epoch=++sessionGuard.epoch;
  if(started){location.reload();return;}started=true;
  await import('./app.js');
+ if(sessionGuard.locked||sessionGuard.epoch!==epoch){lock();form();return;}
  const bar=document.createElement('div');bar.className='account-bar';
  const label=document.createElement('span');label.textContent=data.user.email;
  const logout=document.createElement('button');logout.className='secondary';logout.textContent='Sign out';
