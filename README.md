@@ -1,89 +1,80 @@
 # Pocket
 
-A mobile-first expense tracker in Malaysian ringgit. No app account or backend is required.
+A mobile-first expense tracker in Malaysian ringgit with account-based cloud sync and private photo storage.
 
-## Run
+Live app: https://pocket-expense-tracker-drab.vercel.app/
 
-Requires Node.js 20 or later. There are no application dependencies to install.
+## Privacy model
+
+- Email/password authentication is provided by Supabase Auth. Email confirmation is required.
+- Every diary row is owned by `auth.uid()` and protected by PostgreSQL Row Level Security.
+- Photos are stored in a private Supabase Storage bucket under the authenticated user's UUID.
+- Users cannot read, update, delete, or upload into another account's diary or photo directory.
+- The browser receives only the Supabase publishable key. Privileged database keys and SMTP credentials are not stored in this repository.
+- Concurrent saves use a revision check so stale tabs cannot silently overwrite newer data.
+
+The GitHub repository and application login page are public. Expense records and photos are not public.
+
+## Features
+
+- Daily expense diary with MYR totals, search, category filters, calendar and insights
+- Optional private photo attachments, cover photos and individual photo captions
+- Photo memories, themed albums and monthly keepsake cards
+- CSV export and versioned complete JSON backup/restore
+- Responsive desktop and mobile layouts
+
+## Run locally
+
+Requires Node.js 20 or later.
 
 ```sh
-cd pocket-expense-tracker
+npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Set `PORT` to use a different port. `npm run check` checks JavaScript syntax and runs the data tests. Deploy the `dist` folder to any static host.
+Open http://localhost:3000. The checked-in client is configured for the hosted Supabase project; use your own Supabase project and apply `database/schema.sql` before operating a separate deployment.
+
+Run all build, syntax and unit checks with:
+
+```sh
+npm run check
+```
 
 ## Architecture
 
-- `dist/app.js`: reusable expense rows, dialogs, navigation, Home, History and Insights views, and event handling.
-- `dist/data.js`: validation, seed records, weekday/date formatting, daily grouping, filtering, money calculations and CSV export. Totals are calculated in integer cents.
-- `dist/storage.js`: asynchronous IndexedDB repository, atomic localStorage migration, Blob persistence and revision checks for concurrent tabs.
-- `dist/photos.js`: local photo validation, orientation-aware resizing and JPEG compression.
-- `dist/analytics.js`: local-date daily series, monthly metrics and elapsed-day averages for real spending charts.
-- `dist/journal.js`: Monday-first monthly calendar cells, exact daily totals and photo memory grouping.
-- `dist/scrapbook.js`: album expense aggregation, most-frequent categories and monthly-card photo selection.
-- `dist/recap-card.js`: dependency-free 1080 × 1440 PNG rendering on a local Canvas.
-- `dist/backup.js`: versioned complete backup serialization, strict import validation and photo integrity checks.
-- `dist/icons.js`: small reusable SVG icons.
-- `dist/styles.css`: base components, responsive layout and dialogs.
-- `dist/playful.css`: cream, berry-pink and butter-yellow journal theme, calendar, photo wall and backup controls.
-- `dist/scrapbook.css`: little album books, photo-note editing and monthly keepsake cards.
-- `server.mjs`: dependency-free local static server.
-- `tests/data.test.mjs`: calculations, filtering, validation, persistence and CSV edge cases.
-- `tests/analytics.test.mjs`: weekly date boundaries, leap-year months, missing days and average calculations.
+- `dist/auth-entry.js`: sign-up, email verification, login, logout and owner-only legacy import entry point
+- `dist/session.js`: verified-session guard and account-switch invalidation
+- `dist/cloud.js`: authenticated diary persistence, private photo upload/download and integrity verification
+- `database/schema.sql`: diary schema, save RPC, private bucket and RLS policies
+- `dist/app.js`: views, dialogs, navigation and account-lock cleanup
+- `dist/data.js`: validation, date formatting, filtering, calculations and CSV export
+- `dist/storage.js`: legacy IndexedDB adapter used for owner migration and local backup compatibility
+- `dist/photos.js`: local image validation, resizing and metadata-stripping re-encoding
+- `dist/backup.js`: complete backup serialization and strict restore validation
+- `tests/`: calculations, backup compatibility, session invalidation and UI data-model tests
 
-## Design
+## Storage and migration
 
-The scrapbook-inspired interface uses cream paper, berry-pink controls, butter-yellow and lavender cards, rounded Nunito typography, small tape details and gently tilted photo cards. Home puts the complete daily journal first, with clear links to Calendar and Memories. Mobile bottom navigation includes Home, History, Calendar, Memories and Insights; Add expense stays easy to reach.
+New accounts start with an empty diary. Expenses, categories and albums are stored as a versioned JSON document in `public.pocket_diaries`; photos are separate private objects and are referenced only from their owner's document.
 
-Calendar uses Monday-first weeks, shows daily amounts and photo thumbnails, and opens the selected day's complete expense list with its exact total. Adding an expense from Calendar defaults to the selected date. Memories presents every attached photo by month, newest first, with month filtering and links back to the editable expense. Existing spending charts and category drill-down remain available.
+The original owner's legacy browser data can be imported only by the server-configured owner account and only into an empty cloud diary. The import creates a complete local backup first, uploads the cloud copy, downloads it again and compares the result before reporting success. The original IndexedDB data is left intact.
 
-Each expense stores `id`, `amount`, `category`, `remark`, `date`, `createdAt`, `updatedAt`, an optional `photos` array and a `coverPhotoId`. Photos can also have an optional `caption` of up to 160 characters. Each photo stores an ID, original filename, compressed image Blob, dimensions and creation timestamp. Dates are local calendar dates; timestamps are ISO UTC. “Today” uses the device's calendar date. Custom category renaming updates existing records; hiding keeps records intact, and only unused custom categories can be deleted.
-
-## Storage
-
-Data and photo Blobs are saved in browser IndexedDB: database `pocket.expenses`, object store `state`, key `current`. Expenses, categories and photos are saved atomically before the UI updates. Existing `pocket.expenses.v1` localStorage data is migrated on first use; the original value stays untouched as a migration backup. If migration fails, the original records are not overwritten. Once the database exists, clearing samples or expenses does not re-import old data.
-
-Storage remains specific to the browser, device and site origin; it does not sync across devices. Clearing site data removes expenses and photos. CSV export includes transaction fields, not photo attachments. Cross-tab updates use BroadcastChannel and focus refresh; revision checks reject stale saves instead of silently overwriting newer records.
-
-## Photo memories
-
-Add or edit an expense and choose **Add photos**. Up to four photos can be attached, previewed and removed. Uploading remains optional. Supported images are resized to a maximum dimension of 1600 pixels and re-encoded as JPEG locally, with EXIF metadata removed. Original files up to 20 MB are accepted if the browser can decode them; unsupported formats show an error without changing the draft.
-
-Photos appear as thumbnails in the daily journal and as a gallery in expense details. Tap a gallery image to open the large view. Cancelling an edit preserves saved photos; deleting an expense removes its attachments in the same transaction. Photos are never uploaded to GitHub or Vercel.
-
-Four sample expenses dated 1–3 October 2026 are added on first use. Use **Clear samples** on Home or Preferences to remove only those records. They are not re-added after clearing. Monthly and daily totals always follow the actual device date.
-
-## Little albums, cover photos and monthly cards
-
-Open **Memories → Little albums** to create a themed album, add a note and choose a pastel cover colour. Choose expenses from the diary to include; searching the picker keeps selections intact. Album totals are derived from linked expense IDs, so expenses are never duplicated in the main diary. The same expense may belong to more than one album. Albums show both the expense journal and all related photos. Removing an expense from an album or deleting the album keeps the underlying expenses and photos. Deleting an expense removes its album links atomically.
-
-The optional **Little albums** section in the expense form lets you add or remove membership while editing. A new expense created inside an album is selected for that album automatically. No album selection is required for normal expense entry.
-
-With photos in an expense, choose **Photo notes & cover** to write individual notes and select a cover photo. Applying these choices updates only the form draft; **Save Expense** persists them. Cancelling either editor preserves saved data. Covers are used consistently in the daily journal, calendar, album covers and monthly cards; individual captions appear in the photo wall, large-photo view and expense details.
-
-Open **Memories → Monthly card**, or **Make a monthly card** in Insights, to choose a month and preview a keepsake. It includes the exact total, expense count, most frequently used category and up to four cover photos from distinct expenses. Choose **Hide amounts on my card** to omit the computed amount from both preview and downloaded image. **Download card · PNG** creates a real 1080 × 1440 image locally, without sending photos to a server.
-
-## Complete backup and restore
-
-Open **Backup & restore** from the sidebar, the archive button in the mobile header, or Preferences. **Download backup** saves a versioned `pocket-complete-backup-YYYY-MM-DD.json` file containing every expense, category (including hidden custom categories), album, expense-to-album link, cover selection, photo caption and the complete compressed photo bytes. The new backup format is version 2; previous version-1 complete backups can still be restored, with an empty album collection and default photo covers. CSV remains available for spreadsheet use and does not contain photos.
-
-Choose a complete backup file to inspect expense, photo and category counts before restoring. Restoration requires an explicit **Replace and restore** confirmation and replaces this browser's current diary, including albums; the preview also offers **Download current backup first**. Cancelling or rejecting a damaged file leaves current data unchanged. Restoration uses the same atomic IndexedDB transaction and stale-save protection as other mutations. Backup import accepts files up to 256 MB and validates IDs, dates, amounts, category references, duplicate records, image formats, dimensions and decodability before writing anything.
-
-Backups are ordinary unencrypted local JSON files. Keep them somewhere you trust. Nothing is uploaded as part of exporting or restoring a backup.
-
-## Adding a backend later
-
-Replace the repository adapter in `dist/storage.js` with a Supabase or other database implementation. Initialization and UI mutations already await `load()` and `save()`. A remote adapter can store photo files in private object storage and preserve the expense-to-photo associations. The record shape, filtering, calculations and UI can stay the same. A database adapter can add granular insert/update/delete operations without changing the views. Add authentication and access policies at that time if shared storage is required.
+Complete backups are ordinary unencrypted JSON files. Store exported backups somewhere you trust.
 
 ## Verification
 
-`npm run check` validates all JavaScript modules and runs data, analytics, calendar/memory, backup-compatibility and scrapbook aggregation tests. Browser checks include 38 original expense/photo cases, 45 calendar/backup cases and 51 cases for albums, individual captions, cover selection, draft cancellation, PNG downloads, hidden-amount output, backup restoration and responsive scrapbook layouts at 320px, 390px and 1440px. The test PNG was checked for its file signature and 1080 × 1440 dimensions. See `tests/verification.md`.
+`npm run check` currently runs 18 automated tests. Release verification also covers:
 
-## Vercel deployment
+- two confirmed accounts signing in independently;
+- bidirectional denial of cross-account diary reads and updates;
+- bidirectional denial of cross-account photo downloads and forged uploads;
+- stale revision rejection without automatic transaction retry loops;
+- logout and same-account relogin invalidating pending responses;
+- browser add, logout, account switch and re-login flows;
+- 390px mobile layout without horizontal overflow;
+- anonymous diary access and public photo URLs remaining denied.
 
-The GitHub repository is private. Import this repository into Vercel with the Other preset and project root `./`. `vercel.json` runs syntax and data checks and publishes only `dist`.
+## Deployment
 
-Keep Vercel Authentication enabled for **All Deployments**, including the production domain. Repository privacy alone does not restrict website access. Sign into the authorized Vercel account to open the website.
+Vercel builds with `npm run check` and publishes `dist`. The production login page is public; application data access is enforced by Supabase Auth, RLS and private Storage policies.
 
-Expenses remain local to the browser and site origin; this deployment does not add cross-device sync. Export CSV before clearing browser storage.
