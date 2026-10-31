@@ -1,1 +1,6 @@
 .account-page{margin:8vh auto;max-width:500px;padding:24px}.account-page .panel{padding:32px}.account-page h1{font-size:2.1rem}.account-page form{margin-top:28px}.account-page .form-label{margin-top:18px}.account-bar{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #ded8d7;border-radius:14px;background:#fff;z-index:22;max-width:calc(100% - 28px);box-shadow:0 3px 14px #38222a12}.account-bar span{font-size:11px;overflow:hidden;text-overflow:ellipsis;max-width:180px}.account-bar button{font-size:11px;padding:8px;min-height:35px}.account-page input{font-size:16px}@media(max-width:768px){.account-bar{bottom:82px}.account-bar span{display:none}.account-page{margin:4vh auto}}
+.account-page .panel> .text-link{display:block;width:100%;text-align:center;min-height:44px;padding:10px 8px;line-height:1.5;white-space:normal}
+.account-page .panel> #account-toggle{margin-top:12px}
+.account-page .panel> a.primary{display:flex;align-items:center;justify-content:center;width:100%;margin-top:16px;text-align:center;line-height:1.5;text-decoration:none}
+@media(max-width:400px){.account-page{padding:16px}.account-page .panel{padding:24px}}
+
