@@ -7,4 +7,11 @@
 .account-bar span{max-width:100%;overflow-wrap:anywhere}
 @media(max-width:768px){.account-bar{padding:10px 16px;justify-content:center;gap:8px}.account-bar span{display:block;flex-basis:100%;text-align:center}}
 .fixed-expenses{margin-bottom:20px}.fixed-expenses>p{font-size:.8rem;line-height:1.6;margin-bottom:12px}.fixed-expenses .section-header{flex-wrap:wrap}.fixed-expenses .expense-row{width:100%;border-bottom:1px solid var(--line)}
+.home-main>.fixed-expenses{margin-top:24px}
+.fixed-expenses .expense-row{display:flex;align-items:center;gap:14px;padding:20px 0;text-align:left}
+.fixed-expenses .expense-row .category-icon{flex:0 0 auto}
+.fixed-expenses .expense-row .expense-info{flex:1;min-width:0}
+.fixed-expenses .expense-row .expense-amount{flex:0 0 auto;margin-left:auto;text-align:right;white-space:nowrap}
+.fixed-expenses .expense-row:last-child{border-bottom:0}
+.fixed-expenses .section-header>strong{margin-left:auto;text-align:right;white-space:nowrap}
 
