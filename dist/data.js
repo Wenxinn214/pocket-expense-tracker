@@ -1,4 +1,4 @@
-import {createExpenseRepository} from './storage.js';
+import {createCloudRepository} from './cloud.js';
 export const STORAGE_KEY = 'pocket.expenses.v1';
 export const defaultCategories = [
  ['Food & Drinks','food'],['Transport','transport'],['Shopping','shopping'],['Bills','bills'],['Entertainment','entertainment'],['Health','health'],['Travel','travel'],['Personal','personal'],['Others','others']
@@ -28,7 +28,7 @@ export function seedState() {
  return {version:1,categories:structuredClone(defaultCategories),expenses:records.map(([date,category,remark,amount],i)=>({id:`sample_${i+1}`,date,category,remark,amount,createdAt:`${date}T${i===0?'13':'09'}:00:00.000Z`,updatedAt:`${date}T09:00:00.000Z`}))};
 }
 // Replace this repository adapter to add a backend later.
-export const expenseRepository = createExpenseRepository(seedState);
+export const expenseRepository = createCloudRepository(seedState);
 export function groupExpensesByDay(expenses) {
  const days = new Map();
  for (const expense of newestFirst(expenses)) {
@@ -38,3 +38,4 @@ export function groupExpensesByDay(expenses) {
  return [...days].map(([date,records]) => ({date, expenses:records, amount:total(records)}));
 }
 export const csvExport = expenses => '\uFEFFDate,Category,Remark,Amount\r\n'+newestFirst(expenses).map(e=>[e.date,e.category,e.remark,e.amount.toFixed(2)].map(value=>{let s=String(value); if(/^[=+@\-\t\r]/.test(s)) s="'"+s; return '"'+s.replaceAll('"','""')+'"';}).join(',')).join('\r\n');
+

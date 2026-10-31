@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/storage.js && node --check dist/photos.js && node --check dist/backup.js && node --check dist/journal.js && node --check dist/scrapbook.js && node --check dist/recap-card.js && node --check dist/icons.js && node --check dist/analytics.js && node --test tests/*.test.mjs"
+    "check": "node build.mjs && node --check dist/app.js && node --check dist/data.js && node --check dist/storage.js && node --check dist/photos.js && node --check dist/backup.js && node --check dist/journal.js && node --check dist/scrapbook.js && node --check dist/recap-card.js && node --check dist/icons.js && node --check dist/analytics.js && node --test tests/*.test.mjs",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "esbuild": "0.28.2"
   }
 }
