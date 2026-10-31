@@ -25,6 +25,7 @@ export function backupSummary(state) {
  return {expenses:state.expenses.length,photos:state.expenses.reduce((sum,e)=>sum+(e.photos?.length||0),0),categories:state.categories.length,albums:(state.albums||[]).length,firstDate:dates[0]||null,lastDate:dates.at(-1)||null};
 }
 export async function serializeBackup(state) {
+ const albums=[];for(const album of state.albums||[]){const copy={...album};if(album.coverPhoto){const p=album.coverPhoto;copy.coverPhoto={id:p.id,name:p.name,width:p.width,height:p.height,createdAt:p.createdAt,caption:p.caption||'',type:p.blob.type,data:encode(new Uint8Array(await p.blob.arrayBuffer()))};}albums.push(copy);}
  const expenses=[];
  for(const expense of state.expenses) {
   const photos=[];
@@ -34,7 +35,7 @@ export async function serializeBackup(state) {
   const {id,amount,category,remark,date,createdAt,updatedAt}=expense;
   expenses.push({id,amount,category,remark,date,createdAt,updatedAt,photos,coverPhotoId:coverPhoto(expense)?.id||''});
  }
- const text=JSON.stringify({format:BACKUP_FORMAT,version:2,albums:state.albums||[],exportedAt:new Date().toISOString(),categories:state.categories,expenses});
+ const text=JSON.stringify({format:BACKUP_FORMAT,version:2,albums,exportedAt:new Date().toISOString(),categories:state.categories,expenses});
  if(new Blob([text]).size>MAX_BACKUP_BYTES)fail('This backup is larger than the 256 MB file limit.');
  return text;
 }
@@ -73,12 +74,14 @@ export function parseBackup(text) {
  const albums=(input.albums||[]).map(album=>{
   if(!album||!validId(album.id)||albumIds.has(album.id)||!validText(album.name,48)||!album.name.trim()||!validText(album.note,200)||!['rose','butter','lavender','mint'].includes(album.color)||!validTime(album.createdAt)||!validTime(album.updatedAt)||!Array.isArray(album.expenseIds)||new Set(album.expenseIds).size!==album.expenseIds.length||!album.expenseIds.every(id=>expenseIds.has(id)))fail('The backup contains an invalid album or expense link.');
   albumIds.add(album.id);
-  return {id:album.id,name:album.name,note:album.note,color:album.color,createdAt:album.createdAt,updatedAt:album.updatedAt,expenseIds:[...album.expenseIds]};
+  let coverPhoto;
+  if(album.coverPhoto){const p=album.coverPhoto;if(photoIds.has(p.id))fail('The backup contains duplicate photo IDs.');const validated=parseBackup(JSON.stringify({format:BACKUP_FORMAT,version:2,exportedAt:input.exportedAt,categories:input.categories,albums:[],expenses:[{id:'cover_validation',amount:1,category:categories[0].name,remark:'',date:'2026-01-01',createdAt:album.createdAt,updatedAt:album.updatedAt,photos:[p]}]}));coverPhoto=validated.expenses[0].photos[0];photoIds.add(coverPhoto.id);}
+  return {id:album.id,name:album.name,note:album.note,color:album.color,createdAt:album.createdAt,updatedAt:album.updatedAt,expenseIds:[...album.expenseIds],...(coverPhoto?{coverPhoto}:{})};
  });
  return {version:2,expenses,categories,albums,exportedAt:input.exportedAt};
 }
 export async function verifyBackupPhotos(state) {
- for(const expense of state.expenses)for(const photo of expense.photos) {
+ for(const expense of [...state.expenses,...(state.albums||[]).map(a=>({photos:a.coverPhoto?[a.coverPhoto]:[]}))])for(const photo of expense.photos) {
   let bitmap;
   try {
    bitmap=await createImageBitmap(photo.blob);
@@ -87,3 +90,5 @@ export async function verifyBackupPhotos(state) {
   finally {bitmap?.close();}
  }
 }
+
+

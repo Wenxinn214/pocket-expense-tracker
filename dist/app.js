@@ -24,7 +24,7 @@ function photoUrl(photo) {
  return entry.url;
 }
 function prunePhotoUrls() {
- const used=new Set(state.expenses.flatMap(e=>(e.photos||[]).map(p=>p.id)));
+ const used=new Set([...state.expenses.flatMap(e=>(e.photos||[]).map(p=>p.id)),...state.albums.flatMap(a=>a.coverPhoto?[a.coverPhoto.id]:[])]);
  for(const [id,entry] of photoUrls) if(!used.has(id)){URL.revokeObjectURL(entry.url);photoUrls.delete(id);}
 }
 try { state=await expenseRepository.load(); } catch { $('#app').innerHTML='<div class="startup-error"><h1>Your expenses could not be opened.</h1><p>Browser storage may be unavailable, or saved data may be damaged. Your existing data has not been changed. Enable browser storage and reload to try again.</p><button class="primary" onclick="location.reload()">Try again</button></div>'; }
@@ -161,12 +161,18 @@ function memoryCard(expense,photo) {
 function albumForm(existing) {
  const d=dialog(`${modalHeading(existing?'Edit little album':'A new little chapter')}<form id="album-form"><label class="form-label" for="album-name">Album name</label><input id="album-name" maxlength="48" required placeholder="Penang little getaway" value="${html(existing?.name||'')}"><label class="form-label album-note-label" for="album-note">A little note <span class="muted">(optional)</span></label><textarea id="album-note" maxlength="200" rows="3" placeholder="The people, places and little things to remember…">${html(existing?.note||'')}</textarea><fieldset class="album-color-field"><legend>Cover colour</legend><div class="album-colors">${Object.entries(ALBUM_COLORS).map(([key,label])=>`<button type="button" class="album-color-swatch album-${key} ${key===(existing?.color||'rose')?'selected':''}" data-album-color="${key}" aria-label="${label}" aria-pressed="${key===(existing?.color||'rose')}">${icon('heart')}</button>`).join('')}</div></fieldset><p class="form-error" id="album-error" role="alert"></p><button class="primary save-button" type="submit">${existing?'Save album':'Create album'}</button></form>`,'album-form-modal');
  let color=existing?.color||'rose';
+ let cover=existing?.coverPhoto||null,preparingCover=false,coverUrl;
+ $('#album-error',d).insertAdjacentHTML('beforebegin','<label class="form-label" for="album-cover">Cover photo (optional)</label><input id="album-cover" type="file" accept="image/*"><div id="album-cover-preview"></div><button type="button" class="text-link" id="remove-album-cover">Use default cover</button>');
+ const previewCover=()=>{if(coverUrl)URL.revokeObjectURL(coverUrl);coverUrl=cover?URL.createObjectURL(cover.blob):null;$('#album-cover-preview',d).innerHTML=coverUrl?`<img src="${coverUrl}" alt="Custom album cover" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:12px">`:'<p class="muted">Default album cover</p>';$('#remove-album-cover',d).hidden=!cover;};previewCover();
+ d.addEventListener('close',()=>{if(coverUrl)URL.revokeObjectURL(coverUrl);});
+ $('#remove-album-cover',d).onclick=()=>{cover=null;$('#album-cover',d).value='';previewCover();};
+ $('#album-cover',d).onchange=async event=>{const file=event.target.files[0];if(!file)return;preparingCover=true;$('.save-button',d).disabled=true;try{const photo=await preparePhoto(file);if(d.open){cover=photo;previewCover();$('#album-error',d).textContent='';}}catch(error){$('#album-error',d).textContent=error.message;}finally{preparingCover=false;$('.save-button',d).disabled=false;}};
  d.querySelectorAll('[data-album-color]').forEach(b=>b.onclick=()=>{color=b.dataset.albumColor;d.querySelectorAll('[data-album-color]').forEach(s=>{s.classList.toggle('selected',s===b);s.setAttribute('aria-pressed',String(s===b));});});
  $('#album-form',d).onsubmit=async event=>{
-  event.preventDefault();const name=$('#album-name',d).value.trim();if(!name){$('#album-error',d).textContent='Give your album a little name.';return;}
+  event.preventDefault();if(preparingCover)return;const name=$('#album-name',d).value.trim();if(!name){$('#album-error',d).textContent='Give your album a little name.';return;}
   const button=$('.save-button',d);button.disabled=true;
   try {
-   const now=new Date().toISOString(),album={id:existing?.id||crypto.randomUUID(),name,note:$('#album-note',d).value.trim(),color,expenseIds:existing?.expenseIds||[],createdAt:existing?.createdAt||now,updatedAt:now};
+   const now=new Date().toISOString(),album={id:existing?.id||crypto.randomUUID(),name,note:$('#album-note',d).value.trim(),color,coverPhoto:cover,expenseIds:existing?.expenseIds||[],createdAt:existing?.createdAt||now,updatedAt:now};
    const albums=existing?state.albums.map(a=>a.id===album.id?album:a):[...state.albums,album];
    if(await commit({...state,albums},existing?'Album updated':'A new little chapter is ready')){
     selectedAlbumId=album.id;memoryTab='albums';albumContent='expenses';d.close();page='memories';location.hash='memories';render();

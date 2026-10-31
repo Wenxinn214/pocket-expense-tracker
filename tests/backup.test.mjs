@@ -4,6 +4,7 @@ import {seedState} from '../dist/data.js';
 import {serializeBackup,parseBackup,backupSummary} from '../dist/backup.js';
 const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a26kAAAAASUVORK5CYII='),c=>c.charCodeAt(0));
 const fixture=()=>{const state=seedState();state.expenses[0].remark='午餐 ☕';state.expenses[0].photos=[{id:'photo_1',name:'午餐.png',blob:new Blob([png],{type:'image/png'}),width:1,height:1,createdAt:'2026-10-03T12:00:00Z'}];state.categories.push({id:'custom_1',name:'Little treats',icon:'tag',custom:true,hidden:true});return state;};
+test('custom album cover roundtrips its bytes without changing linked expenses',async()=>{const state=fixture();state.albums=[{id:'album_cover',name:'Holiday',note:'',color:'mint',expenseIds:[state.expenses[0].id],createdAt:'2026-10-03T12:00:00Z',updatedAt:'2026-10-03T12:00:00Z',coverPhoto:{...state.expenses[0].photos[0],id:'album_cover_photo'}}];const restored=parseBackup(await serializeBackup(state));assert.deepEqual(new Uint8Array(await restored.albums[0].coverPhoto.blob.arrayBuffer()),png);assert.deepEqual(restored.albums[0].expenseIds,state.albums[0].expenseIds);assert.equal(restored.expenses.length,state.expenses.length);const bad=JSON.parse(await serializeBackup(state));bad.albums[0].coverPhoto.data='broken';assert.throws(()=>parseBackup(JSON.stringify(bad)));});
 test('complete backup roundtrip preserves binary photos, Unicode, timestamps and hidden categories',async()=>{
  const source=fixture(),text=await serializeBackup(source),restored=parseBackup(text);
  assert.deepEqual(backupSummary(restored),{expenses:4,photos:1,categories:10,albums:0,firstDate:'2026-10-01',lastDate:'2026-10-03'});
@@ -42,3 +43,5 @@ test('previous complete backup format restores without albums or photo metadata'
  for(const e of original.expenses){delete e.coverPhotoId;for(const p of e.photos)delete p.caption;}
  const restored=parseBackup(JSON.stringify(original));assert.deepEqual(restored.albums,[]);assert.equal(restored.expenses[0].coverPhotoId,'photo_1');assert.equal(restored.expenses[0].photos[0].caption,'');
 });
+
+

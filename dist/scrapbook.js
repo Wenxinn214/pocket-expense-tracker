@@ -8,7 +8,7 @@ export function albumExpenses(album,expenses) {
 }
 export function albumSummary(album,expenses) {
  const records=albumExpenses(album,expenses),photos=records.reduce((sum,e)=>sum+(e.photos?.length||0),0);
- const cover=records.map(coverPhoto).find(Boolean)||null;
+ const cover=album.coverPhoto||records.map(coverPhoto).find(Boolean)||null;
  return {records,amount:total(records),count:records.length,photos,cover,firstDate:records.at(-1)?.date||null,lastDate:records[0]?.date||null};
 }
 export function monthlyRecap(expenses,month) {
@@ -18,3 +18,5 @@ export function monthlyRecap(expenses,month) {
  const photos=records.map(expense=>({expense,photo:coverPhoto(expense)})).filter(e=>e.photo).slice(0,4);
  return {month,amount:total(records),count:records.length,favourite,photos};
 }
+
+
