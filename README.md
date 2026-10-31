@@ -4,6 +4,14 @@ A mobile-first expense tracker in Malaysian ringgit with account-based cloud syn
 
 Live app: https://pocket-expense-tracker-drab.vercel.app/
 
+Try the interactive demo without signing up: https://pocket-expense-tracker-drab.vercel.app/?demo=1
+
+The demo includes fictional expenses, illustrated JPEG keepsakes and an album. Explore all views, add or edit entries, and export backups. Changes stay in this tab's memory and reset on refresh. Demo actions never save to an account or Supabase.
+
+![Pocket demo dashboard](docs/demo-home.png)
+
+![Pocket demo memories](docs/demo-memories.png)
+
 ## Privacy model
 
 - Email/password authentication is provided by Supabase Auth. Email confirmation is required.

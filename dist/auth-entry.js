@@ -1,4 +1,5 @@
 import {client,sessionGuard} from './session.js';
+import {isDemo} from './demo.js';
 const root=document.querySelector('#app');
 let started=false;
 function lock(){sessionGuard.locked=true;sessionGuard.epoch++;window.dispatchEvent(new Event('pocket:lock'));document.querySelectorAll('dialog').forEach(d=>d.close());root.replaceChildren();}
@@ -10,6 +11,7 @@ function form(mode='login',message=''){
  root.querySelector('[type=submit]').textContent=mode==='signup'?'Create account':mode==='recovery'?'Save password':'Sign in';
  root.querySelector('#account-toggle').textContent=mode==='login'?'New here? Create an account':'Already registered? Sign in';
  root.querySelector('#account-toggle').onclick=()=>form(mode==='login'?'signup':'login');
+ const demo=document.createElement('a');demo.href='/?demo=1';demo.className='primary';demo.textContent='View demo · No sign-up';root.querySelector('section').append(demo);
  root.querySelector('#account-reset').onclick=async()=>{const email=root.querySelector('#account-email');if(!email.reportValidity())return;const r=await client.auth.resetPasswordForEmail(email.value,{redirectTo:location.origin+'/'});status.textContent=r.error?r.error.message:'If that account exists, a reset link has been sent.';};
  root.querySelector('form').onsubmit=async event=>{
   event.preventDefault();const button=root.querySelector('[type=submit]');button.disabled=true;
@@ -59,4 +61,5 @@ client.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){lock();form('recovery');}
  else if(started&&(!session||session.user.id!==sessionGuard.id)){lock();document.querySelector('.account-bar')?.remove();form();}
 });
-if(location.hash.includes('type=recovery')){await client.auth.getSession();form('recovery');}else await enter();
+if(isDemo){await import('./app.js');const bar=document.createElement('div');bar.className='account-bar';bar.innerHTML='<span>DEMO · Fictional data · Changes reset when refreshed</span><a class="secondary" href="/">Exit demo / Sign in</a><a class="secondary" href="/?demo=1">Reset demo</a>';document.body.append(bar);}else if(location.hash.includes('type=recovery')){await client.auth.getSession();form('recovery');}else await enter();
+
