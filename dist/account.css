@@ -3,4 +3,7 @@
 .account-page .panel> #account-toggle{margin-top:12px}
 .account-page .panel> a.primary{display:flex;align-items:center;justify-content:center;width:100%;margin-top:16px;text-align:center;line-height:1.5;text-decoration:none}
 @media(max-width:400px){.account-page{padding:16px}.account-page .panel{padding:24px}}
+.account-bar{position:static;transform:none;max-width:none;flex-wrap:wrap;justify-content:flex-end;margin:0;padding:12px 24px;border-width:0 0 1px;border-radius:0;box-shadow:none}
+.account-bar span{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:768px){.account-bar{padding:10px 16px;justify-content:center;gap:8px}.account-bar span{display:block;flex-basis:100%;text-align:center}}
 

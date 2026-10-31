@@ -1,6 +1,7 @@
 import {client,sessionGuard} from './session.js';
 import {isDemo} from './demo.js';
 const root=document.querySelector('#app');
+function placeAccountBar(bar){(document.querySelector('.workspace')||root).prepend(bar);}
 let started=false;
 function lock(){sessionGuard.locked=true;sessionGuard.epoch++;window.dispatchEvent(new Event('pocket:lock'));document.querySelectorAll('dialog').forEach(d=>d.close());root.replaceChildren();}
 function form(mode='login',message=''){
@@ -35,7 +36,7 @@ async function enter(){
  const label=document.createElement('span');label.textContent=data.user.email;
  const logout=document.createElement('button');logout.className='secondary';logout.textContent='Sign out';
  logout.onclick=async()=>{lock();bar.remove();const r=await client.auth.signOut();form('login',r.error?'Sign-out could not be completed. Please retry.':'Signed out.');};
- bar.append(label,logout);document.body.append(bar);
+ bar.append(label,logout);placeAccountBar(bar);
  const permitted=await client.rpc('pocket_can_import');
  if(!permitted.error&&permitted.data===true){const button=document.createElement('button');button.className='secondary';button.textContent='Import old diary from this device';bar.prepend(button);button.onclick=async()=>{
   button.disabled=true;
