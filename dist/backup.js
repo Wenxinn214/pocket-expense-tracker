@@ -1,4 +1,5 @@
 import {validateExpense} from './data.js';
+import {validateCardDrafts} from './card-drafts.js';
 import {coverPhoto,MAX_PHOTOS} from './photos.js';
 
 export const BACKUP_FORMAT = 'pocket-complete-backup';
@@ -35,7 +36,7 @@ export async function serializeBackup(state) {
   const {id,amount,category,remark,date,createdAt,updatedAt}=expense;
   expenses.push({id,amount,category,remark,date,createdAt,updatedAt,photos,coverPhotoId:coverPhoto(expense)?.id||''});
  }
- const text=JSON.stringify({format:BACKUP_FORMAT,version:2,albums,exportedAt:new Date().toISOString(),categories:state.categories,expenses});
+ const text=JSON.stringify({format:BACKUP_FORMAT,version:2,albums,cardDrafts:validateCardDrafts(state.cardDrafts),exportedAt:new Date().toISOString(),categories:state.categories,expenses});
  if(new Blob([text]).size>MAX_BACKUP_BYTES)fail('This backup is larger than the 256 MB file limit.');
  return text;
 }
@@ -78,7 +79,7 @@ export function parseBackup(text) {
   if(album.coverPhoto){const p=album.coverPhoto;if(photoIds.has(p.id))fail('The backup contains duplicate photo IDs.');const validated=parseBackup(JSON.stringify({format:BACKUP_FORMAT,version:2,exportedAt:input.exportedAt,categories:input.categories,albums:[],expenses:[{id:'cover_validation',amount:1,category:categories[0].name,remark:'',date:'2026-01-01',createdAt:album.createdAt,updatedAt:album.updatedAt,photos:[p]}]}));coverPhoto=validated.expenses[0].photos[0];photoIds.add(coverPhoto.id);}
   return {id:album.id,name:album.name,note:album.note,color:album.color,createdAt:album.createdAt,updatedAt:album.updatedAt,expenseIds:[...album.expenseIds],...(coverPhoto?{coverPhoto}:{})};
  });
- return {version:2,expenses,categories,albums,exportedAt:input.exportedAt};
+ return {version:2,expenses,categories,albums,cardDrafts:validateCardDrafts(input.cardDrafts),exportedAt:input.exportedAt};
 }
 export async function verifyBackupPhotos(state) {
  for(const expense of [...state.expenses,...(state.albums||[]).map(a=>({photos:a.coverPhoto?[a.coverPhoto]:[]}))])for(const photo of expense.photos) {

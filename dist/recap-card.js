@@ -35,7 +35,7 @@ export async function renderRecapCard(recap,{hideAmounts=false}={}) {
  roundRect(ctx,410,24,260,48,5,'#f9e5ad');
  text(ctx,'pocket.',94,118,400,35,'#a24f75',900);
  text(ctx,monthLabel(recap.month),986,118,500,30,'#a7879b',700,'right');
- text(ctx,'A month of little moments',540,195,900,53,'#75475f',900,'center');
+ text(ctx,recap.title||'A month of little moments',540,195,900,53,'#75475f',900,'center');
  roundRect(ctx,88,230,904,210,26,'#fff0bf');
  text(ctx,hideAmounts?'A LITTLE PRIVACY, A LOT OF MEMORIES':'MY MONTHLY SPENDING',540,281,820,24,'#96734b',800,'center');
  text(ctx,hideAmounts?'Kept just for me':currency(recap.amount),540,369,820,hideAmounts?62:78,'#876044',900,'center');
@@ -58,6 +58,8 @@ export async function renderRecapCard(recap,{hideAmounts=false}={}) {
   text(ctx,'Everyday things, lovingly kept.',540,920,800,40,'#b5809c',800,'center');
   text(ctx,'No photo memories this month',540,978,790,29,'#ab8b9f',600,'center');
  }
- text(ctx,'A little diary. A month to remember.',540,1372,900,25,'#ae8b9e',700,'center');
+ text(ctx,recap.note||'A little diary. A month to remember.',540,1372,900,25,'#ae8b9e',700,'center');
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('The card could not be downloaded. Please try again.')),'image/png'));
 }
+
+
