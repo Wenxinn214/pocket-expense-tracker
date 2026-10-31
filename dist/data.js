@@ -1,5 +1,6 @@
 import {createCloudRepository} from './cloud.js';
 import {isDemo,createDemoRepository} from './demo.js';
+import {withFixedCategory} from './fixed.js';
 export const STORAGE_KEY = 'pocket.expenses.v1';
 export const defaultCategories = [
  ['Food & Drinks','food'],['Transport','transport'],['Shopping','shopping'],['Bills','bills'],['Entertainment','entertainment'],['Health','health'],['Travel','travel'],['Personal','personal'],['Others','others']
@@ -29,7 +30,8 @@ export function seedState() {
  return {version:1,categories:structuredClone(defaultCategories),expenses:records.map(([date,category,remark,amount],i)=>({id:`sample_${i+1}`,date,category,remark,amount,createdAt:`${date}T${i===0?'13':'09'}:00:00.000Z`,updatedAt:`${date}T09:00:00.000Z`}))};
 }
 // Replace this repository adapter to add a backend later.
-export const expenseRepository = isDemo ? createDemoRepository(defaultCategories) : createCloudRepository(seedState);
+const repository = isDemo ? createDemoRepository(defaultCategories) : createCloudRepository(seedState);
+export const expenseRepository={async load(){return withFixedCategory(await repository.load());},save:state=>repository.save(state)};
 export function groupExpensesByDay(expenses) {
  const days = new Map();
  for (const expense of newestFirst(expenses)) {

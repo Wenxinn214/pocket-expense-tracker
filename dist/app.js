@@ -261,6 +261,10 @@ function expenseForm(existing,initialDate=today()) {
  const d=dialog(`${modalHeading(existing?'Edit expense':'Add expense')}<form id="expense-form" novalidate><label class="amount-label" for="amount">Amount</label><div class="amount-input"><span>RM</span><input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" value="${existing?existing.amount.toFixed(2):''}" required aria-describedby="form-error" maxlength="12" autofocus></div><fieldset class="categories-field"><legend>Category</legend><div class="category-picker">${state.categories.filter(c=>!c.hidden||c.name===existing?.category).map(c=>`<button type="button" class="category-option ${existing?.category===c.name?'selected':''}" data-category="${html(c.name)}" aria-pressed="${existing?.category===c.name?'true':'false'}">${icon(c.icon)}<span>${html(c.name)}</span></button>`).join('')}</div></fieldset><label class="form-label" for="remark">Remark <span class="muted">(optional)</span></label><input id="remark" name="remark" type="text" placeholder="What was it for?" maxlength="160" value="${html(existing?.remark||'')}"><div class="photo-field"><div class="photo-field-heading"><label class="form-label" for="expense-photos">Photos <span class="muted">(optional)</span></label><span class="photo-limit" id="photo-count"></span></div><div class="photo-previews" id="photo-previews"></div><button type="button" class="text-link photo-metadata-button" id="edit-photo-notes" hidden>${icon('heart')} Photo notes & cover</button><label class="photo-upload" for="expense-photos">${icon('camera')}<span>Add photos</span><input class="sr-only" type="file" id="expense-photos" accept="image/*" multiple aria-describedby="photo-help photo-error"></label><p class="photo-help" id="photo-help">Up to ${MAX_PHOTOS} photos · saved on this device</p><p class="form-error" id="photo-error" role="alert"></p></div><label class="form-date"><span>${icon('calendar')}Date</span><input id="expense-date" name="date" type="date" required value="${existing?.date||initialDate}"></label><p class="selected-date" id="expense-date-label">${dateLabel(existing?.date||initialDate)}</p>${state.albums.length?`<details class="expense-albums"><summary>${icon('book')} Little albums <span class="muted">(optional)</span></summary><div>${state.albums.map(album=>`<label><input type="checkbox" data-expense-album="${html(album.id)}" ${(album.expenseIds.includes(existing?.id)||(!existing&&page==='memories'&&memoryTab==='albums'&&selectedAlbumId===album.id))?'checked':''}><span>${html(album.name)}</span></label>`).join('')}</div></details>`:''}<p class="form-error" id="form-error" role="alert"></p><button class="primary save-button" type="submit">${icon('check')}${existing?'Save Changes':'Save Expense'}</button></form>`,'expense-modal');
  let category=existing?.category||'', photos=(existing?.photos||[]).map(p=>({...p,caption:p.caption||''})), coverId=coverPhoto(existing||{photos:[]})?.id||'', preparing=false, saving=false;
  const previewUrls=new Map();
+ const dateInput=$('#expense-date',d),dateLabelNode=$('#expense-date-label',d),dateCaption=$('.form-date>span',d);
+ let dailyDate=existing?.date||initialDate,selectedMonth=dailyDate.slice(0,7);
+ const updateDateMode=()=>{const fixed=state.categories.find(c=>c.name===category)?.id==='fixed_expenses';dateInput.type=fixed?'month':'date';dateInput.value=fixed?selectedMonth:dailyDate;dateCaption.textContent=fixed?'For month':'Date';dateLabelNode.textContent=fixed?'One manual entry only. Included in this month; grouped on the 1st in the calendar.':dateLabel(dailyDate);};
+ updateDateMode();
  const refreshPhotos=()=>{
   if(!photos.some(p=>p.id===coverId))coverId=photos[0]?.id||'';
   $('#edit-photo-notes',d).hidden=!photos.length;
@@ -278,7 +282,7 @@ function expenseForm(existing,initialDate=today()) {
  $('#edit-photo-notes',d).onclick=()=>photoNotesEditor(photos,coverId,(updated,id)=>{photos=updated;coverId=id;refreshPhotos();});
  refreshPhotos();
  d.addEventListener('close',()=>{for(const url of previewUrls.values())URL.revokeObjectURL(url);});
- $('#expense-date',d).oninput=event=>{$('#expense-date-label',d).textContent=event.target.value?dateLabel(event.target.value):'';};
+ dateInput.oninput=()=>{if(dateInput.type==='month')selectedMonth=dateInput.value;else dailyDate=dateInput.value;if(dateInput.value)updateDateMode();};
  $('#expense-photos',d).onchange=async event=>{
   const files=[...event.target.files];if(!files.length)return;
   $('#photo-error',d).textContent='';
@@ -291,10 +295,11 @@ function expenseForm(existing,initialDate=today()) {
   } catch(error){if(d.open)$('#photo-error',d).textContent=error.message;}
   finally {preparing=false;if(d.open){event.target.value='';$('.save-button',d).disabled=false;$('.photo-upload span',d).textContent='Add photos';refreshPhotos();}}
  };
- d.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;d.querySelectorAll('[data-category]').forEach(c=>{c.classList.toggle('selected',c===b);c.setAttribute('aria-pressed',String(c===b));});$('#form-error',d).textContent='';});
+ d.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;updateDateMode();d.querySelectorAll('[data-category]').forEach(c=>{c.classList.toggle('selected',c===b);c.setAttribute('aria-pressed',String(c===b));});$('#form-error',d).textContent='';});
  $('#expense-form',d).onsubmit=async event=>{
   event.preventDefault();if(preparing||saving)return;
-  const values={amount:$('#amount',d).value.trim(),category,remark:$('#remark',d).value.trim(),date:$('#expense-date',d).value};
+  let date=dateInput.value;try{if(dateInput.type==='month')date=fixedDate(date);}catch(error){$('#form-error',d).textContent=error.message;return;}
+  const values={amount:$('#amount',d).value.trim(),category,remark:$('#remark',d).value.trim(),date};
   const error=validateExpense(values,state.categories);
   if(error){$('#form-error',d).textContent=error;if(!values.amount||Number(values.amount)<=0)$('#amount',d).focus();return;}
   saving=true;$('.save-button',d).disabled=true;
@@ -390,4 +395,5 @@ if(syncChannel)syncChannel.onmessage=refreshFromOtherTab;
 window.addEventListener('focus',()=>{if(state)refreshFromOtherTab();});
 if(state)render();
 
+import {fixedDate} from './fixed.js';
 
